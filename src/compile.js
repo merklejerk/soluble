@@ -71,6 +71,7 @@ async function writeCompilationOutput(compilationOutput, outputDir) {
                     {
                         abi: contract.abi,
                         bytecode: contract.evm.bytecode.object,
+                        deployedBytecode: contract.evm.deployedBytecode.object,
                         ...(Object.keys(contract.evm.bytecode.linkReferences) !== 0
                             ? contract.evm.bytecode.linkReferences
                             : {}),
@@ -93,7 +94,7 @@ function createStandardInput(contentByPath, config) {
             ...config.compilerSettings,
             outputSelection: {
                 '*': {
-                    '*': [ 'abi', 'metadata', 'evm.bytecode' ],
+                    '*': [ 'abi', 'metadata', 'evm.bytecode', 'evm.deployedBytecode' ],
                 },
             },
         },
