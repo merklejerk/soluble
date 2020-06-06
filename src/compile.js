@@ -4,7 +4,7 @@ const { promises: fs } = require('fs');
 const fsSync = require('fs');
 const _ = require('lodash');
 const mkdirp = require('mkdirp');
-const { resolve: resolvePath } = require('path');
+const { basename, resolve: resolvePath } = require('path');
 const solc = require('solc');
 
 const DEFAULT_CONFIG = {
@@ -25,6 +25,7 @@ async function compileFiles(inputFiles, config) {
     if (inputFiles.length === 0) {
         return {};
     }
+    console.info(`Compiling ${inputFiles.map(f => basename(f)).join(', ')} with ${solc.version()}...`)
     const contents = await Promise.all(
         inputFiles.map(f => fs.readFile(f, { encoding: 'utf-8' })),
     );

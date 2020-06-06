@@ -1,6 +1,6 @@
 {
     "name": "soluble",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "lean solidity build tool",
     "main": "src/index.js",
     "bin": { "soluble": "src/cli.js" },
