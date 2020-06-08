@@ -1,6 +1,6 @@
 {
     "name": "soluble",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "lean solidity build tool",
     "main": "src/index.js",
     "bin": { "soluble": "src/cli.js" },
@@ -16,8 +16,10 @@
         "glob": "^7.1.6",
         "lodash": "^4.17.15",
         "mkdirp": "^1.0.4",
-        "solc": "^0.6.1",
         "yargs": "^15.3.1"
+    },
+    "devDependencies": {
+        "solc": "^0.6.1"
     },
     "engines": {
         "node": ">= 10.0.0"
