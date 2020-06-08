@@ -31,7 +31,9 @@ const args = require('yargs')
             );
         },
     )
+    .strict()
     .demandCommand(1)
+    .help()
     .argv;
 
 async function loadBuildConfig(configFile) {
