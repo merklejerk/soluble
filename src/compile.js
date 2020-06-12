@@ -30,7 +30,7 @@ async function compileFiles(inputFiles, config) {
         inputFiles.map(f => fs.readFile(f, { encoding: 'utf-8' })),
     );
     const inputContentByPath = inputFiles.length > 0
-        ? Object.fromEntries(inputFiles.map((p, i) => [p, contents[i]]))
+        ? _.fromPairs(inputFiles.map((p, i) => [p, contents[i]]))
         : {};
     const compilerOutput = JSON.parse(solc.compile(
         JSON.stringify(createStandardInput(inputContentByPath, config)),
