@@ -50,10 +50,13 @@ async function compileFiles(inputFiles, config) {
             throw new Error('Compilation errors encountered.');
         }
     }
-    return _.omitBy(
-        compilerOutput.contracts,
-        (contracts, path) => !inputFiles.includes(path)
-    );
+    return {
+        sources: compilerOutput.sources,
+        contracts: _.omitBy(
+            compilerOutput.contracts,
+            (contracts, path) => !inputFiles.includes(path)
+        ),
+    };
 }
 
 function resolveImportContent(path) {
@@ -64,19 +67,33 @@ function resolveImportContent(path) {
 async function writeCompilationOutput(compilationOutput, outputDir) {
     await mkdirp(outputDir);
     const writePromises = [];
-    for (const [path, contracts] of Object.entries(compilationOutput)) {
+    for (const [path, contracts] of Object.entries(compilationOutput.contracts)) {
         for (const [contractName, contract] of Object.entries(contracts)) {
             writePromises.push(fs.writeFile(
                 resolvePath(outputDir, `${contractName}.output.json`),
                 JSON.stringify(
-                    {
-                        abi: contract.abi,
-                        bytecode: contract.evm.bytecode.object,
-                        deployedBytecode: contract.evm.deployedBytecode.object,
-                        ...(Object.keys(contract.evm.bytecode.linkReferences) !== 0
-                            ? contract.evm.bytecode.linkReferences
-                            : {}),
-                    },
+                    _.omitBy(
+                        {
+                            abi: contract.abi,
+                            bytecode: addHexPrefix(contract.evm.bytecode.object),
+                            deployedBytecode: addHexPrefix(contract.evm.deployedBytecode.object),
+                            bytecodeLinkReferences: _.get(
+                                contract,
+                                ['evm', 'bytecode', 'linkReferences'],
+                                {},
+                            ),
+                            deployedBytecodeLinkReferences: _.get(
+                                contract,
+                                ['evm', 'deployedBytecode', 'linkReferences'],
+                                {},
+                            ),
+                            deployedBytecodeImmutableReferences: createImmutables(
+                                contract,
+                                compilationOutput.sources,
+                            ),
+                        },
+                        v => _.isEmpty(v),
+                    ),
                     null,
                     '\t',
                 ),
@@ -85,6 +102,47 @@ async function writeCompilationOutput(compilationOutput, outputDir) {
         }
     }
     return Promise.all(writePromises);
+}
+
+function addHexPrefix(bytes) {
+    if (bytes.startsWith('0x')) {
+        return bytes;
+    }
+    return `0x${bytes}`;
+}
+
+function createImmutables(contract, sources) {
+    const references = _.get(
+        contract,
+        ['evm', 'deployedBytecode', 'immutableReferences'],
+        {},
+    );
+    return _.mapKeys(references, (_v,id) => findImmutableVariable(contract, sources, id));
+}
+
+function findImmutableVariable(contract, sources, id) {
+    id = parseInt(id);
+    let currentContract;
+    const _walk = node => {
+        if (node.nodeType === 'ContractDefinition') {
+            currentContract = node.name;
+        }
+        if (node.id === id) {
+            return `${currentContract}.${node.name}`;
+        }
+        for (const ch of node.nodes || []) {
+            const variable = _walk(ch);
+            if (variable) {
+                return variable;
+            }
+        }
+    };
+    for (const sourceFile in sources) {
+        const variable = _walk(sources[sourceFile].ast);
+        if (variable) {
+            return variable;
+        }
+    }
 }
 
 function createStandardInput(contentByPath, config) {
@@ -96,6 +154,7 @@ function createStandardInput(contentByPath, config) {
             outputSelection: {
                 '*': {
                     '*': [ 'abi', 'metadata', 'evm.bytecode', 'evm.deployedBytecode' ],
+                    '': [ 'ast' ],
                 },
             },
         },
