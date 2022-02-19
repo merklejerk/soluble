@@ -32,8 +32,9 @@ async function compileFiles(inputFiles, config) {
     const inputContentByPath = inputFiles.length > 0
         ? _.fromPairs(inputFiles.map((p, i) => [p, contents[i]]))
         : {};
+    const standardInput = createStandardInput(inputContentByPath, config);
     const compilerOutput = JSON.parse(solc.compile(
-        JSON.stringify(createStandardInput(inputContentByPath, config)),
+        JSON.stringify(standardInput),
         { import: resolveImportContent },
     ));
     if (compilerOutput.errors) {
@@ -51,6 +52,7 @@ async function compileFiles(inputFiles, config) {
         }
     }
     return {
+        standardInput,
         sources: compilerOutput.sources,
         contracts: _.omitBy(
             compilerOutput.contracts,
@@ -60,11 +62,15 @@ async function compileFiles(inputFiles, config) {
 }
 
 function resolveImportContent(path) {
-    path = require.resolve(path);
+    try {
+        path = require.resolve(path);
+    } catch (err) {
+        path = require.resolve(path, { paths: [`${process.cwd()}`] });
+    }
     return { contents: fsSync.readFileSync(path, { encoding: 'utf-8' }) };
 }
 
-async function writeCompilationOutput(compilationOutput, outputDir) {
+async function writeCompilationOutput(compilationOutput, outputDir, standardInputName) {
     await mkdirp(outputDir);
     const writePromises = [];
     for (const [path, contracts] of Object.entries(compilationOutput.contracts)) {
@@ -100,6 +106,12 @@ async function writeCompilationOutput(compilationOutput, outputDir) {
                 { encoding: 'utf-8' },
             ));
         }
+    }
+    if (standardInputName) {
+        writePromises.push(fs.writeFile(
+            resolvePath(outputDir, standardInputName),
+            JSON.stringify(compilationOutput.standardInput, null, '\t'),
+        ));
     }
     return Promise.all(writePromises);
 }

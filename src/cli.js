@@ -21,6 +21,11 @@ const args = require('yargs')
                 alias: 'C',
                 type: 'string',
                 default: 'soluble.json',
+            })
+            .option('jsonInput', {
+                alias: 'I',
+                type: 'string',
+                default: '',
             }),
         async argv => {
             const config = await loadBuildConfig(argv.configFile);
@@ -28,6 +33,7 @@ const args = require('yargs')
             await writeCompilationOutput(
                 await compileFiles(inputFiles, config),
                 resolvePath(argv.outputDir),
+                argv.jsonInput,
             );
         },
     )
